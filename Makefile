@@ -1,6 +1,7 @@
 .PHONY: help run migrate makemigrations shell test lint format \
        docker-build docker-up docker-down docker-logs docker-shell \
-       docker-migrate docker-makemigrations docker-collectstatic docker-test superuser
+       docker-migrate docker-makemigrations docker-collectstatic docker-test superuser \
+       makemessages compilemessages docker-makemessages docker-compilemessages
 
 # ──────────────────────────────────────────────────────────────
 # Help
@@ -44,6 +45,14 @@ lint: ## Run ruff linter
 format: ## Format code with ruff
 	uv run ruff format .
 
+L ?= ar
+
+makemessages: ## Extract translatable strings (default L=ar)
+	uv run python manage.py makemessages -l $(L) --ignore=venv/* --no-location
+
+compilemessages: ## Compile .po files to .mo files
+	uv run python manage.py compilemessages
+
 # ──────────────────────────────────────────────────────────────
 # Docker Development
 # ──────────────────────────────────────────────────────────────
@@ -80,3 +89,9 @@ docker-collectstatic: ## Collect static files inside Docker
 
 docker-test: ## Run tests inside Docker
 	$(DOCKER_COMPOSE) exec web uv run pytest tests/ -v
+
+docker-makemessages: ## Run makemessages inside Docker (default L=ar)
+	$(DOCKER_COMPOSE) exec web python manage.py makemessages -l $(L) --ignore=venv/* --no-location
+
+docker-compilemessages: ## Run compilemessages inside Docker
+	$(DOCKER_COMPOSE) exec web python manage.py compilemessages
