@@ -93,6 +93,14 @@ STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # ---------------------------------------------------------------------------
+# Email
+# ---------------------------------------------------------------------------
+
+DEFAULT_FROM_EMAIL = os.environ.get(
+    "DEFAULT_FROM_EMAIL", "Atomic Ledger <noreply@atomicledger.io>"
+)
+
+# ---------------------------------------------------------------------------
 # Database — PostgreSQL via PgBouncer (Connection Pooling)
 # ---------------------------------------------------------------------------
 

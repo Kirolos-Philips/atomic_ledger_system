@@ -2,4 +2,8 @@ from django.apps import AppConfig
 
 
 class LedgerConfig(AppConfig):
-    name = 'ledger'
+    name = "ledger"
+    default_auto_field = "django.db.models.BigAutoField"
+
+    def ready(self):
+        import ledger.signals  # noqa: F401
