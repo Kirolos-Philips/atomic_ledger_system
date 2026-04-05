@@ -1,0 +1,84 @@
+services:
+
+  # Database - PostgreSQL
+  db:
+    image: postgres:16-alpine
+    container_name: ledger_db
+    env_file:
+      - envs/dev/postgres.env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ledger" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Connection Pooling Handler - PgBouncer
+  pgbouncer:
+    image: edoburu/pgbouncer:latest
+    container_name: ledger_pgbouncer
+    env_file:
+      - envs/dev/pgbouncer.env
+    volumes:
+      - ./pgbouncer/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro
+      - ./pgbouncer/userlist.txt:/etc/pgbouncer/userlist.txt:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -h localhost -p 6432 -U ledger" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Message Broker - Redis
+  redis:
+    image: redis:7-alpine
+    container_name: ledger_redis
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Background Worker - Celery
+  worker:
+    build: .
+    container_name: ledger_worker
+    command: celery -A config worker --loglevel=info
+    volumes:
+      - .:/app #TODO to be added later
+    env_file:
+      - envs/dev/django.env
+    depends_on:
+      pgbouncer:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # Monitoring - Flower
+  flower:
+    image: mher/flower
+    container_name: ledger_flower
+    env_file:
+      - envs/dev/django.env
+    ports:
+      - "5555:5555"
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  # Email Testing - Mailpit
+  mailpit:
+    image: axllent/mailpit
+    container_name: ledger_mailpit
+    ports:
+      - "8025:8025" # Web UI
+      - "1025:1025" # SMTP server
+
+volumes:
+  postgres_data:
+  redis_data:
