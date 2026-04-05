@@ -3,9 +3,9 @@
 # Exit on error
 set -e
 
-# Wait for PgBouncer to be ready
-echo "Waiting for database..."
-while ! nc -z pgbouncer 6432; do
+# Wait for database (PgBouncer in prod, directly in dev)
+echo "Waiting for database at ${POSTGRES_HOST}:${POSTGRES_PORT}..."
+while ! nc -z ${POSTGRES_HOST} ${POSTGRES_PORT}; do
   sleep 0.5
 done
 echo "Database is ready!"
