@@ -1,13 +1,32 @@
 services:
 
+  # Web Application - Django + Gunicorn
+  web:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: ledger_web_prod
+    command: /app/docker/entrypoint.sh gunicorn --bind 0.0.0.0:8000 --workers 4 config.wsgi:application
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - ../envs/prod/django.env
+    depends_on:
+      pgbouncer:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
   # Database - PostgreSQL
   db:
     image: postgres:16-alpine
-    container_name: ledger_db
+    container_name: ledger_db_prod
+    restart: unless-stopped
     env_file:
-      - envs/dev/postgres.env
+      - ../envs/prod/postgres.env
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data_prod:/var/lib/postgresql/data
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U ledger" ]
       interval: 10s
@@ -17,9 +36,10 @@ services:
   # Connection Pooling Handler - PgBouncer
   pgbouncer:
     image: edoburu/pgbouncer:latest
-    container_name: ledger_pgbouncer
+    container_name: ledger_pgbouncer_prod
+    restart: unless-stopped
     env_file:
-      - envs/dev/pgbouncer.env
+      - ../envs/prod/pgbouncer.env
     volumes:
       - ./pgbouncer/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro
       - ./pgbouncer/userlist.txt:/etc/pgbouncer/userlist.txt:ro
@@ -35,9 +55,10 @@ services:
   # Message Broker - Redis
   redis:
     image: redis:7-alpine
-    container_name: ledger_redis
+    container_name: ledger_redis_prod
+    restart: unless-stopped
     volumes:
-      - redis_data:/data
+      - redis_data_prod:/data
     healthcheck:
       test: [ "CMD", "redis-cli", "ping" ]
       interval: 10s
@@ -46,39 +67,20 @@ services:
 
   # Background Worker - Celery
   worker:
-    build: .
-    container_name: ledger_worker
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: ledger_worker_prod
     command: celery -A config worker --loglevel=info
-    volumes:
-      - .:/app #TODO to be added later
+    restart: unless-stopped
     env_file:
-      - envs/dev/django.env
+      - ../envs/prod/django.env
     depends_on:
       pgbouncer:
         condition: service_healthy
       redis:
         condition: service_healthy
 
-  # Monitoring - Flower
-  flower:
-    image: mher/flower
-    container_name: ledger_flower
-    env_file:
-      - envs/dev/django.env
-    ports:
-      - "5555:5555"
-    depends_on:
-      redis:
-        condition: service_healthy
-
-  # Email Testing - Mailpit
-  mailpit:
-    image: axllent/mailpit
-    container_name: ledger_mailpit
-    ports:
-      - "8025:8025" # Web UI
-      - "1025:1025" # SMTP server
-
 volumes:
-  postgres_data:
-  redis_data:
+  postgres_data_prod:
+  redis_data_prod:

@@ -1,0 +1,44 @@
+# Version control
+.git
+.gitignore
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+*.egg-info
+dist
+build
+
+# Virtual environment
+.venv
+venv
+env
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment files (secrets)
+envs/prod/
+
+# Docker (don't send docker config into the build context)
+docker/docker-compose.dev.yml
+docker/docker-compose.prod.yml
+
+# Database
+db.sqlite3
+db.sqlite3-journal
+
+# Docs & misc
+README.md
+LICENSE
+Makefile
+Makefile.prod

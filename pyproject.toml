@@ -1,0 +1,28 @@
+[project]
+name = "atomic-ledger-system"
+version = "0.1.0"
+description = "A backend service for managing customer accounts and money movements"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "celery>=5.6.3",
+    "django>=5.2,<6.0",
+    "django-filter>=25.2",
+    "djangorestframework>=3.17.1",
+    "drf-spectacular>=0.29.0",
+    "gunicorn>=25.3.0",
+    "psycopg2-binary>=2.9.11",
+    "redis>=7.4.0",
+]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings.dev"
+python_files = ["tests/test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+    "pytest-django>=4.12.0",
+]

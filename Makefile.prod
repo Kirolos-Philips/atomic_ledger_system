@@ -1,0 +1,43 @@
+.PHONY: help prod-build prod-up prod-down prod-logs prod-ps prod-migrate prod-collectstatic prod-check
+
+# ──────────────────────────────────────────────────────────────
+# Help
+# ──────────────────────────────────────────────────────────────
+
+help: ## Show this help message
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
+		awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
+
+# ──────────────────────────────────────────────────────────────
+# Docker Variables (Production)
+# ──────────────────────────────────────────────────────────────
+
+DOCKER_COMPOSE_PROD = docker compose -f docker/docker-compose.prod.yml
+
+# ──────────────────────────────────────────────────────────────
+# Production Tasks
+# ──────────────────────────────────────────────────────────────
+
+prod-build: ## Build production Docker images
+	$(DOCKER_COMPOSE_PROD) build
+
+prod-up: ## Start production containers
+	$(DOCKER_COMPOSE_PROD) up -d
+
+prod-down: ## Stop production containers
+	$(DOCKER_COMPOSE_PROD) down
+
+prod-logs: ## Tail production logs
+	$(DOCKER_COMPOSE_PROD) logs -f
+
+prod-ps: ## List running production containers
+	$(DOCKER_COMPOSE_PROD) ps
+
+prod-migrate: ## Run Django migrations inside production Docker
+	$(DOCKER_COMPOSE_PROD) exec web uv run python manage.py migrate
+
+prod-collectstatic: ## Collect static files inside production Docker
+	$(DOCKER_COMPOSE_PROD) exec web uv run python manage.py collectstatic --no-input
+
+prod-check: ## Run Django system checks in production environment
+	$(DOCKER_COMPOSE_PROD) exec web uv run python manage.py check --deploy
