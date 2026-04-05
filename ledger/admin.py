@@ -13,10 +13,19 @@ class AccountAdmin(admin.ModelAdmin):
 
 @admin.register(Transaction)
 class TransactionAdmin(admin.ModelAdmin):
-    list_display = ("id", "account", "amount", "created_at", "idempotency_key")
-    list_filter = ("created_at",)
+    list_display = ("id", "account", "type_", "amount", "created_at", "idempotency_key")
+    list_filter = ("type_", "created_at")
     search_fields = ("id", "account__name", "description", "idempotency_key")
-    readonly_fields = ("id", "created_at")
+    fields = [
+        "id",
+        "account",
+        "type_",
+        "amount",
+        "description",
+        "idempotency_key",
+        "created_at",
+    ]
+    readonly_fields = ("id", "type_", "created_at")
 
     def has_change_permission(self, request, obj=None):
         """Transactions are immutable and cannot be modified."""

@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-04-05 22:04+0000\n"
-"PO-Revision-Date: 2026-04-05 22:06+0000\n"
+"POT-Creation-Date: 2026-04-05 23:05+0000\n"
+"PO-Revision-Date: 2026-04-05 23:07+0000\n"
 "Last-Translator: Antigravity\n"
 "Language-Team: Arabic\n"
 "Language: ar\n"
@@ -17,6 +17,24 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=6; plural=n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 "
 "&& n%100<=10 ? 3 : n%100>=11 && n%100<=99 ? 4 : 5;\n"
+
+msgid "A ledger error occurred."
+msgstr "حدث خطأ في النظام المالي."
+
+msgid "Insufficient funds in the account."
+msgstr "رصيد الحساب غير كافٍ."
+
+msgid "The account is inactive."
+msgstr "الحساب غير نشط."
+
+msgid "The amount must be greater than zero."
+msgstr "يجب أن يكون المبلغ أكبر من الصفر."
+
+msgid "A transaction with this idempotency key already exists."
+msgstr "توجد حركة مالية مسجلة بهذا المفتاح مسبقاً."
+
+msgid "Source and destination accounts must be different."
+msgstr "يجب أن يكون حساب المصدر وحساب الوجهة مختلفين."
 
 msgid "created at"
 msgstr "تاريخ الإنشاء"
@@ -54,8 +72,17 @@ msgstr "حساب"
 msgid "Accounts"
 msgstr "حسابات"
 
+msgid "Debit"
+msgstr "مدين"
+
+msgid "Credit"
+msgstr "دائن"
+
 msgid "account"
 msgstr "الحساب"
+
+msgid "type"
+msgstr "النوع"
 
 msgid "Positive for Credit (+), Negative for Debit (-)"
 msgstr "موجب للإيداع (+)، سالب للسحب (-)"

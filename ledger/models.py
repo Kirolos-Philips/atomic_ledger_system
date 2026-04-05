@@ -71,12 +71,21 @@ class Transaction(models.Model):
     Transactions are append-only and immutable.
     """
 
+    class TransactionType(models.TextChoices):
+        DEBIT = "DEBIT", _("Debit")
+        CREDIT = "CREDIT", _("Credit")
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     account = models.ForeignKey(
         Account,
         on_delete=models.PROTECT,
         related_name="transactions",
         verbose_name=_("account"),
+    )
+    type_ = models.CharField(
+        max_length=10,
+        choices=TransactionType.choices,
+        verbose_name=_("type"),
     )
     amount = models.DecimalField(
         max_digits=20,
@@ -85,7 +94,8 @@ class Transaction(models.Model):
         verbose_name=_("amount"),
     )
     description = models.TextField(blank=True, verbose_name=_("description"))
-    idempotency_key = models.UUIDField(
+    idempotency_key = models.CharField(
+        max_length=255,
         unique=True,
         null=True,
         blank=True,
@@ -103,13 +113,16 @@ class Transaction(models.Model):
             models.Index(
                 fields=["account", "-created_at"], name="idx_txn_account_created"
             ),
+            models.Index(
+                fields=["account", "type_", "-created_at"],
+                name="idx_txn_account_type_created",
+            ),
         ]
         verbose_name = _("Transaction")
         verbose_name_plural = _("Transactions")
 
     def __str__(self):
-        type_str = "CREDIT" if self.amount >= 0 else "DEBIT"
-        return f"{self.id}: {type_str} {abs(self.amount)} to {self.account.name}"
+        return f"{self.id}: {self.type_} {abs(self.amount)} to {self.account.name}"
 
 
 class Transfer(TimeStampedModel):
