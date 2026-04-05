@@ -82,7 +82,7 @@ class Transaction(models.Model):
         related_name="transactions",
         verbose_name=_("account"),
     )
-    type_ = models.CharField(
+    transaction_type = models.CharField(
         max_length=10,
         choices=TransactionType.choices,
         verbose_name=_("type"),
@@ -114,7 +114,7 @@ class Transaction(models.Model):
                 fields=["account", "-created_at"], name="idx_txn_account_created"
             ),
             models.Index(
-                fields=["account", "type_", "-created_at"],
+                fields=["account", "transaction_type", "-created_at"],
                 name="idx_txn_account_type_created",
             ),
         ]
@@ -122,7 +122,7 @@ class Transaction(models.Model):
         verbose_name_plural = _("Transactions")
 
     def __str__(self):
-        return f"{self.id}: {self.type_} {abs(self.amount)} to {self.account.name}"
+        return f"{self.id}: {self.transaction_type} {abs(self.amount)} to {self.account.name}"
 
 
 class Transfer(TimeStampedModel):

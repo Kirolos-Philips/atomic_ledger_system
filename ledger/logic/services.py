@@ -54,7 +54,7 @@ def create_transaction(
         )
         txn = Transaction.objects.create(
             account=account,
-            type_=txn_type,
+            transaction_type=txn_type,
             amount=amount,
             description=description,
             idempotency_key=idempotency_key,
