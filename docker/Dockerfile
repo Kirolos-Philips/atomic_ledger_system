@@ -23,8 +23,12 @@ FROM python:3.12-slim-bookworm
 
 # Runtime system dependencies
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends netcat-openbsd && \
-    rm -rf /var/lib/apt/lists/*
+    apt-get install -y --no-install-recommends \
+        curl \
+        postgresql-client \
+        netcat-openbsd \
+        gettext \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy uv binary into runtime stage as well
 COPY --from=ghcr.io/astral-sh/uv:0.6.3 /uv /usr/local/bin/
