@@ -30,11 +30,10 @@ shell: ## Open Django shell
 superuser: ## Create a superuser
 	uv run python manage.py createsuperuser
 
-test: ## Run tests with pytest
-	uv run pytest tests/ -v
+test: ## Run tests with Django test runner (preserves DB)
+	uv run python manage.py test ledger.tests -v 2 --keepdb
 
-test-cov: ## Run tests with coverage
-	uv run pytest tests/ -v --tb=short
+# test-cov removed (pytest-specific)
 
 check: ## Run Django system checks
 	uv run python manage.py check
@@ -87,8 +86,8 @@ docker-makemigrations: ## Create new Django migrations inside Docker
 docker-collectstatic: ## Collect static files inside Docker
 	$(DOCKER_COMPOSE) exec web uv run python manage.py collectstatic --no-input
 
-docker-test: ## Run tests inside Docker
-	$(DOCKER_COMPOSE) exec web uv run pytest tests/ -v
+docker-test: ## Run tests inside Docker (preserves DB)
+	$(DOCKER_COMPOSE) exec web uv run python manage.py test ledger.tests -v 2 --keepdb
 
 docker-makemessages: ## Run makemessages inside Docker (default L=ar)
 	$(DOCKER_COMPOSE) exec web python manage.py makemessages -l $(L) --ignore=venv/* --no-location

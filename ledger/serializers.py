@@ -1,4 +1,4 @@
-from drf_spectacular.utils import extend_schema_serializer, OpenApiExample
+from drf_spectacular.utils import OpenApiExample, extend_schema_serializer
 from rest_framework import serializers
 
 from .logic.services import create_transaction, create_transfer
@@ -91,16 +91,19 @@ class TransferSerializer(serializers.ModelSerializer):
         max_digits=20,
         decimal_places=4,
         min_value=0.01,
+        write_only=True,
         help_text="Amount to transfer (must be > 0).",
     )
     description = serializers.CharField(
         required=False,
         allow_blank=True,
+        write_only=True,
         help_text="Optional note for the transfer.",
     )
     idempotency_key = serializers.CharField(
         required=False,
         allow_null=True,
+        write_only=True,
         help_text="Unique key to prevent duplicate transfer processing.",
     )
 
