@@ -86,8 +86,8 @@ docker-makemigrations: ## Create new Django migrations inside Docker
 docker-collectstatic: ## Collect static files inside Docker
 	$(DOCKER_COMPOSE) exec web uv run python manage.py collectstatic --no-input
 
-docker-test: ## Run tests inside Docker (preserves DB)
-	$(DOCKER_COMPOSE) exec web uv run python manage.py test ledger.tests -v 2 --keepdb
+docker-test: ## Run tests inside Docker
+	$(DOCKER_COMPOSE) exec -T web uv run python manage.py test ledger.tests -v 2 --keepdb
 
 docker-makemessages: ## Run makemessages inside Docker (default L=ar)
 	$(DOCKER_COMPOSE) exec web python manage.py makemessages -l $(L) --ignore=venv/* --no-location

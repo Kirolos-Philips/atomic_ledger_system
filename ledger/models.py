@@ -1,6 +1,3 @@
-import uuid
-
-from django.conf import settings
 from django.db import models
 from django.db.models import CheckConstraint, Q
 from django.utils.translation import gettext_lazy as _
@@ -18,20 +15,23 @@ class TimeStampedModel(models.Model):
 
 class Account(TimeStampedModel):
     """
-    Represents a financial account belonging to a user.
-    A user can have multiple accounts (e.g., in different currencies).
+    Represents a financial account belonging to a customer.
+    Customers can have multiple accounts (e.g., in different currencies).
     """
 
     class AccountType(models.TextChoices):
         CURRENT = "CURRENT", _("Current")
         SAVINGS = "SAVINGS", _("Savings")
 
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name="ledger_accounts",
-        verbose_name=_("user"),
+    class Currency(models.TextChoices):
+        USD = "USD", _("US Dollar")
+        EUR = "EUR", _("Euro")
+        GBP = "GBP", _("British Pound")
+        EGP = "EGP", _("Egyptian Pound")
+
+    owner_name = models.CharField(
+        max_length=255,
+        verbose_name=_("owner name"),
     )
     name = models.CharField(
         max_length=20,
@@ -39,6 +39,13 @@ class Account(TimeStampedModel):
         default=AccountType.CURRENT,
         help_text=_("Type/Label of the account"),
         verbose_name=_("name"),
+    )
+    currency = models.CharField(
+        max_length=3,
+        choices=Currency.choices,
+        default=Currency.USD,
+        help_text=_("Currency code (e.g., USD, EUR)"),
+        verbose_name=_("currency"),
     )
     balance = models.DecimalField(
         max_digits=20,
@@ -55,14 +62,14 @@ class Account(TimeStampedModel):
         ]
         indexes = [
             models.Index(fields=["is_active"], name="idx_account_active"),
-            models.Index(fields=["user", "name"], name="idx_account_user_type"),
+            models.Index(fields=["owner_name"], name="idx_account_owner"),
             models.Index(fields=["created_at"], name="idx_account_created"),
         ]
         verbose_name = _("Account")
         verbose_name_plural = _("Accounts")
 
     def __str__(self):
-        return f"{self.user.username} - {self.name} ({self.balance})"
+        return f"{self.owner_name} - {self.name} ({self.currency} {self.balance})"
 
 
 class Transaction(models.Model):
@@ -75,7 +82,6 @@ class Transaction(models.Model):
         DEBIT = "DEBIT", _("Debit")
         CREDIT = "CREDIT", _("Credit")
 
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     account = models.ForeignKey(
         Account,
         on_delete=models.PROTECT,
@@ -122,7 +128,7 @@ class Transaction(models.Model):
         verbose_name_plural = _("Transactions")
 
     def __str__(self):
-        return f"{self.id}: {self.transaction_type} {abs(self.amount)} to {self.account.name}"
+        return f"{self.pk}: {self.transaction_type} {abs(self.amount)} to {self.account.name}"
 
 
 class Transfer(TimeStampedModel):
@@ -131,7 +137,6 @@ class Transfer(TimeStampedModel):
     between two different accounts.
     """
 
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     source_transaction = models.OneToOneField(
         Transaction,
         on_delete=models.PROTECT,

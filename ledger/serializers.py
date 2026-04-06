@@ -15,9 +15,10 @@ from .models import Account, Transaction, Transfer
         OpenApiExample(
             "Account Response",
             value={
-                "id": "550e8400-e29b-41d4-a716-446655440000",
-                "user": 1,
+                "id": 1,
+                "owner_name": "John Doe",
                 "name": "CURRENT",
+                "currency": "USD",
                 "balance": "1500.0000",
                 "is_active": True,
                 "created_at": "2026-04-05T22:00:00Z",
@@ -29,7 +30,15 @@ from .models import Account, Transaction, Transfer
 class AccountSerializer(serializers.ModelSerializer):
     class Meta:
         model = Account
-        fields = ["id", "user", "name", "balance", "is_active", "created_at"]
+        fields = [
+            "id",
+            "owner_name",
+            "name",
+            "currency",
+            "balance",
+            "is_active",
+            "created_at",
+        ]
         read_only_fields = ["id", "balance", "created_at"]
 
 
@@ -71,8 +80,8 @@ class TransactionSerializer(serializers.ModelSerializer):
         OpenApiExample(
             "Transfer Request",
             value={
-                "source_account": "550e8400-e29b-41d4-a716-446655440000",
-                "destination_account": "660e8400-e29b-41d4-a716-446655440001",
+                "source_account": 1,
+                "destination_account": 2,
                 "amount": "250.0000",
                 "description": "Rent payment",
             },

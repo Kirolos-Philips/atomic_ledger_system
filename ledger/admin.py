@@ -5,15 +5,30 @@ from .models import Account, Transaction, Transfer
 
 @admin.register(Account)
 class AccountAdmin(admin.ModelAdmin):
-    list_display = ("id", "user", "name", "balance", "is_active", "created_at")
-    list_filter = ("name", "is_active", "user")
-    search_fields = ("id", "user__username", "name")
+    list_display = (
+        "id",
+        "owner_name",
+        "name",
+        "currency",
+        "balance",
+        "is_active",
+        "created_at",
+    )
+    list_filter = ("name", "is_active", "currency")
+    search_fields = ("id", "owner_name", "name")
     readonly_fields = ("id", "created_at", "updated_at")
 
 
 @admin.register(Transaction)
 class TransactionAdmin(admin.ModelAdmin):
-    list_display = ("id", "account", "transaction_type", "amount", "created_at", "idempotency_key")
+    list_display = (
+        "id",
+        "account",
+        "transaction_type",
+        "amount",
+        "created_at",
+        "idempotency_key",
+    )
     list_filter = ("transaction_type", "created_at")
     search_fields = ("id", "account__name", "description", "idempotency_key")
     fields = [

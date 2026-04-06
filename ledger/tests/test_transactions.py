@@ -4,15 +4,14 @@ from unittest.mock import patch
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from .factories import AccountFactory, TokenFactory, UserFactory
+from .factories import AccountFactory
 
 
 class TransactionTests(APITestCase):
     def setUp(self):
-        self.user = UserFactory()
-        token = TokenFactory(user=self.user)
-        self.client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
-        self.account = AccountFactory(user=self.user, balance=Decimal("1000.0000"))
+        self.account = AccountFactory(
+            owner_name="Test User", balance=Decimal("1000.0000")
+        )
 
     @patch("ledger.signals.process_transaction_event.delay")
     def test_credit_and_debit(self, mock_task):
@@ -25,7 +24,7 @@ class TransactionTests(APITestCase):
             with self.subTest(amount=amount):
                 res = self.client.post(
                     "/api/transactions/",
-                    {"account": str(self.account.id), "amount": amount},
+                    {"account": self.account.id, "amount": amount},
                     format="json",
                 )
                 self.assertEqual(res.status_code, status.HTTP_201_CREATED)
@@ -38,7 +37,7 @@ class TransactionTests(APITestCase):
         """Insufficient funds and inactive accounts are rejected."""
         res = self.client.post(
             "/api/transactions/",
-            {"account": str(self.account.id), "amount": "-5000.00"},
+            {"account": self.account.id, "amount": "-5000.00"},
             format="json",
         )
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
@@ -47,7 +46,7 @@ class TransactionTests(APITestCase):
         self.account.save()
         res = self.client.post(
             "/api/transactions/",
-            {"account": str(self.account.id), "amount": "100.00"},
+            {"account": self.account.id, "amount": "100.00"},
             format="json",
         )
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
@@ -56,7 +55,7 @@ class TransactionTests(APITestCase):
     def test_immutability(self, mock_task):
         create = self.client.post(
             "/api/transactions/",
-            {"account": str(self.account.id), "amount": "100.00"},
+            {"account": self.account.id, "amount": "100.00"},
             format="json",
         )
         tid = create.data["id"]

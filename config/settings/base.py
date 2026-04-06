@@ -1,8 +1,14 @@
 import os
 from pathlib import Path
 
+import environ
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
+
+env = environ.Env()
+# Read .env file if it exists
+environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
 
 # ---------------------------------------------------------------------------
 # Application definition
@@ -96,8 +102,18 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 # Email
 # ---------------------------------------------------------------------------
 
-DEFAULT_FROM_EMAIL = os.environ.get(
-    "DEFAULT_FROM_EMAIL", "Atomic Ledger <noreply@atomicledger.io>"
+EMAIL_BACKEND = env(
+    "EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend"
+)
+EMAIL_HOST = env("EMAIL_HOST", default="localhost")
+EMAIL_PORT = env.int("EMAIL_PORT", default=25)
+EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="")
+EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
+EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=False)
+EMAIL_USE_SSL = env.bool("EMAIL_USE_SSL", default=False)
+
+DEFAULT_FROM_EMAIL = env(
+    "DEFAULT_FROM_EMAIL", default="Atomic Ledger <noreply@atomicledger.io>"
 )
 
 # ---------------------------------------------------------------------------
@@ -107,11 +123,11 @@ DEFAULT_FROM_EMAIL = os.environ.get(
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.environ.get("POSTGRES_DB", "ledger"),
-        "USER": os.environ.get("POSTGRES_USER", "ledger"),
-        "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "ledger"),
-        "HOST": os.environ.get("POSTGRES_HOST", "pgbouncer"),
-        "PORT": os.environ.get("POSTGRES_PORT", "6432"),
+        "NAME": env("POSTGRES_DB", default="ledger"),
+        "USER": env("POSTGRES_USER", default="ledger"),
+        "PASSWORD": env("POSTGRES_PASSWORD", default="ledger"),
+        "HOST": env("POSTGRES_HOST", default="pgbouncer"),
+        "PORT": env("POSTGRES_PORT", default="6432"),
     }
 }
 
@@ -153,8 +169,8 @@ REST_FRAMEWORK = {
 # Celery & Redis
 # ---------------------------------------------------------------------------
 
-CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://localhost:6379/0")
-CELERY_RESULT_BACKEND = os.environ.get("CELERY_RESULT_BACKEND", CELERY_BROKER_URL)
+CELERY_BROKER_URL = env("CELERY_BROKER_URL", default="redis://localhost:6379/0")
+CELERY_RESULT_BACKEND = env("CELERY_RESULT_BACKEND", default=CELERY_BROKER_URL)
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"

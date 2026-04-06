@@ -13,6 +13,7 @@ dependencies = [
     "gunicorn>=25.3.0",
     "psycopg2-binary>=2.9.11",
     "redis>=7.4.0",
+    "django-environ>=0.12.0",
 ]
 
 

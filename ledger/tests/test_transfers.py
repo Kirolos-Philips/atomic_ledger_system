@@ -4,25 +4,22 @@ from unittest.mock import patch
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from .factories import AccountFactory, TokenFactory, UserFactory
+from .factories import AccountFactory
 
 
 class TransferTests(APITestCase):
     def setUp(self):
-        self.user = UserFactory()
-        token = TokenFactory(user=self.user)
-        self.client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
         self.source = AccountFactory(
-            user=self.user, name="CURRENT", balance=Decimal("1000.0000")
+            owner_name="Source User", name="CURRENT", balance=Decimal("1000.0000")
         )
         self.dest = AccountFactory(
-            user=self.user, name="SAVINGS", balance=Decimal("0.0000")
+            owner_name="Dest User", name="SAVINGS", balance=Decimal("0.0000")
         )
 
     def _transfer(self, **overrides):
         payload = {
-            "source_account": str(self.source.id),
-            "destination_account": str(self.dest.id),
+            "source_account": self.source.id,
+            "destination_account": self.dest.id,
             "amount": "250.00",
         }
         payload.update(overrides)
@@ -50,8 +47,8 @@ class TransferTests(APITestCase):
         """Parameterized: various invalid transfer scenarios."""
         cases = [
             {"amount": "99999.00"},  # insufficient funds
-            {"destination_account": str(self.source.id)},  # same account
-            {"source_account": "00000000-0000-0000-0000-000000000000"},  # nonexistent
+            {"destination_account": self.source.id},  # same account
+            {"source_account": 999999},  # nonexistent account
         ]
         for overrides in cases:
             with self.subTest(overrides=overrides):

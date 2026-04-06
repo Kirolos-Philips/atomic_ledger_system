@@ -1,6 +1,5 @@
 from decimal import Decimal
 from typing import Optional
-from uuid import UUID
 
 from django.db import transaction
 from django.utils.translation import gettext_lazy as _
@@ -18,7 +17,7 @@ from .validators import (
 
 
 def create_transaction(
-    account_id: UUID,
+    account_id: int,
     amount: Decimal,
     description: str = "",
     idempotency_key: Optional[str] = None,
@@ -68,8 +67,8 @@ def create_transaction(
 
 
 def create_transfer(
-    source_account_id: UUID,
-    destination_account_id: UUID,
+    source_account_id: int,
+    destination_account_id: int,
     amount: Decimal,
     description: str = "",
     idempotency_key: Optional[str] = None,

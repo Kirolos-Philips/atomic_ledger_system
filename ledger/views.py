@@ -17,8 +17,8 @@ from .serializers import (
 @extend_schema_view(
     list=extend_schema(
         summary="List all accounts",
-        description="Returns a paginated list of all accounts the current user has access to. "
-        "Supports filtering by `is_active` and `user`, and search by `name`.",
+        description="Returns a paginated list of all accounts. "
+        "Supports filtering by `is_active` and `owner_name`.",
     ),
     retrieve=extend_schema(
         summary="Retrieve account details",
@@ -26,7 +26,7 @@ from .serializers import (
     ),
     create=extend_schema(
         summary="Create a new account",
-        description="Creates a new financial account for the authenticated user.",
+        description="Creates a new financial account.",
     ),
     update=extend_schema(
         summary="Update an account",
@@ -46,10 +46,10 @@ class AccountViewSet(viewsets.ModelViewSet):
 
     queryset = Account.objects.all().order_by("-created_at")
     serializer_class = AccountSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.AllowAny]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-    filterset_fields = ["is_active", "user"]
-    search_fields = ["name"]
+    filterset_fields = ["is_active", "owner_name"]
+    search_fields = ["owner_name"]
 
     @extend_schema(
         summary="Get account balance",
@@ -89,7 +89,7 @@ class AccountViewSet(viewsets.ModelViewSet):
             OpenApiExample(
                 "Credit (Deposit)",
                 value={
-                    "account": "550e8400-e29b-41d4-a716-446655440000",
+                    "account": 1,
                     "amount": "500.00",
                     "description": "Salary deposit",
                 },
@@ -98,7 +98,7 @@ class AccountViewSet(viewsets.ModelViewSet):
             OpenApiExample(
                 "Debit (Withdrawal)",
                 value={
-                    "account": "550e8400-e29b-41d4-a716-446655440000",
+                    "account": 1,
                     "amount": "-100.00",
                     "description": "ATM withdrawal",
                 },
@@ -122,7 +122,7 @@ class TransactionViewSet(
 
     queryset = Transaction.objects.select_related("account").order_by("-created_at")
     serializer_class = TransactionSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.AllowAny]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ["account", "transaction_type"]
     search_fields = ["description", "idempotency_key"]
@@ -147,8 +147,8 @@ class TransactionViewSet(
             OpenApiExample(
                 "Transfer between accounts",
                 value={
-                    "source_account": "550e8400-e29b-41d4-a716-446655440000",
-                    "destination_account": "660e8400-e29b-41d4-a716-446655440001",
+                    "source_account": 1,
+                    "destination_account": 2,
                     "amount": "250.00",
                     "description": "Rent payment",
                 },
@@ -175,7 +175,7 @@ class TransferViewSet(
         "destination_transaction__account",
     ).order_by("-created_at")
     serializer_class = TransferSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.AllowAny]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = [
         "source_transaction__account",

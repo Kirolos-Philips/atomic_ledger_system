@@ -27,7 +27,8 @@ class AccountFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Account
 
-    user = factory.SubFactory(UserFactory)
+    owner_name = factory.Sequence(lambda n: f"Owner {n}")
     name = "CURRENT"
     balance = Decimal("1000.0000")
+    currency = "USD"
     is_active = True
