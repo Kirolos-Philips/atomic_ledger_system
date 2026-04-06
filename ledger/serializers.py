@@ -122,6 +122,12 @@ class TransferSerializer(serializers.ModelSerializer):
         write_only=True,
         help_text="Unique key to prevent duplicate transfer processing.",
     )
+    transfer_amount = serializers.DecimalField(
+        source="destination_transaction.amount",
+        read_only=True,
+        max_digits=20,
+        decimal_places=4,
+    )
 
     class Meta:
         model = Transfer
@@ -130,6 +136,7 @@ class TransferSerializer(serializers.ModelSerializer):
             "source_account",
             "destination_account",
             "amount",
+            "transfer_amount",
             "description",
             "idempotency_key",
             "source_transaction",
