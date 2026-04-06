@@ -8,14 +8,14 @@ class AccountAdmin(admin.ModelAdmin):
     list_display = (
         "id",
         "owner_name",
-        "name",
+        "account_type",
         "currency",
         "balance",
         "is_active",
         "created_at",
     )
-    list_filter = ("name", "is_active", "currency")
-    search_fields = ("id", "owner_name", "name")
+    list_filter = ("account_type", "is_active", "currency")
+    search_fields = ("id", "owner_name", "account_type")
     readonly_fields = ("id", "created_at", "updated_at")
 
 
@@ -30,7 +30,7 @@ class TransactionAdmin(admin.ModelAdmin):
         "idempotency_key",
     )
     list_filter = ("transaction_type", "created_at")
-    search_fields = ("id", "account__name", "description", "idempotency_key")
+    search_fields = ("id", "account__account_type", "description", "idempotency_key")
     fields = [
         "id",
         "account",

@@ -18,7 +18,7 @@ from .models import Account, Transaction, Transfer
             value={
                 "id": 1,
                 "owner_name": "John Doe",
-                "name": "CURRENT",
+                "account_type": "CURRENT",
                 "currency": "USD",
                 "balance": "1500.0000",
                 "is_active": True,
@@ -34,7 +34,7 @@ class AccountSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "owner_name",
-            "name",
+            "account_type",
             "currency",
             "balance",
             "is_active",
@@ -44,21 +44,21 @@ class AccountSerializer(serializers.ModelSerializer):
 
 
 class TransactionSerializer(serializers.ModelSerializer):
-    account_name = serializers.CharField(source="account.name", read_only=True)
+    account_type = serializers.CharField(source="account.account_type", read_only=True)
 
     class Meta:
         model = Transaction
         fields = [
             "id",
             "account",
-            "account_name",
+            "account_type",
             "transaction_type",
             "amount",
             "description",
             "idempotency_key",
             "created_at",
         ]
-        read_only_fields = ["id", "transaction_type", "account_name", "created_at"]
+        read_only_fields = ["id", "transaction_type", "account_type", "created_at"]
         extra_kwargs = {
             "idempotency_key": {"validators": []},  # Handled manually in validate()
         }

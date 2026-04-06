@@ -14,7 +14,7 @@ class AccountTests(APITestCase):
     def test_create_and_balance(self):
         res = self.client.post(
             "/api/accounts/",
-            {"name": "CURRENT", "owner_name": "John Doe", "currency": "USD"},
+            {"account_type": "CURRENT", "owner_name": "John Doe", "currency": "USD"},
             format="json",
         )
         self.assertEqual(res.status_code, status.HTTP_201_CREATED)
@@ -27,7 +27,7 @@ class AccountTests(APITestCase):
         """Invalid type is rejected; balance cannot be modified via API."""
         invalid = self.client.post(
             "/api/accounts/",
-            {"name": "INVALID", "owner_name": "Jane Doe"},
+            {"account_type": "INVALID", "owner_name": "Jane Doe"},
             format="json",
         )
         self.assertEqual(invalid.status_code, status.HTTP_400_BAD_REQUEST)

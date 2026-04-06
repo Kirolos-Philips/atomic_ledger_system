@@ -46,7 +46,7 @@ def process_transaction_event(self, transaction_id: str, event_type: str):
             "Transaction event: %s | %s | Account: %s | Amount: %s | User: %s",
             event_type,
             txn.id,
-            txn.account.name,
+            txn.account.account_type,
             amount,
             user.username,
         )
@@ -58,7 +58,7 @@ def process_transaction_event(self, transaction_id: str, event_type: str):
                 message = (
                     f"Dear {user.get_full_name() or user.username},\n\n"
                     f"A deposit of {amount} has been credited to your "
-                    f"{txn.account.get_name_display()} account.\n\n"
+                    f"{txn.account.get_account_type_display()} account.\n\n"
                     f"New Balance: {txn.account.balance.quantize(Decimal('0.0001'))}\n\n"
                     f"Transaction ID: {txn.id}\n"
                     f"Description: {txn.description or 'N/A'}\n\n"
@@ -69,7 +69,7 @@ def process_transaction_event(self, transaction_id: str, event_type: str):
                 message = (
                     f"Dear {user.get_full_name() or user.username},\n\n"
                     f"A withdrawal of {amount} has been debited from your "
-                    f"{txn.account.get_name_display()} account.\n\n"
+                    f"{txn.account.get_account_type_display()} account.\n\n"
                     f"New Balance: {txn.account.balance.quantize(Decimal('0.0001'))}\n\n"
                     f"Transaction ID: {txn.id}\n"
                     f"Description: {txn.description or 'N/A'}\n\n"
@@ -116,9 +116,9 @@ def process_transfer_event(self, transfer_id: str):
         logger.info(
             "Transfer event: %s | %s (%s) → %s (%s) | Amount: %s",
             transfer.id,
-            src_txn.account.name,
+            src_txn.account.account_type,
             src_user.username,
-            dst_txn.account.name,
+            dst_txn.account.account_type,
             dst_user.username,
             amount,
         )
@@ -131,7 +131,7 @@ def process_transfer_event(self, transfer_id: str):
                 message=(
                     f"Dear {src_user.get_full_name() or src_user.username},\n\n"
                     f"You have successfully transferred {amount} "
-                    f"from your {src_txn.account.get_name_display()} account "
+                    f"from your {src_txn.account.get_account_type_display()} account "
                     f"to {dst_user.get_full_name() or dst_user.username}.\n\n"
                     f"New Balance: {src_txn.account.balance.quantize(Decimal('0.0001'))}\n\n"
                     f"Transfer ID: {transfer.id}\n"
@@ -148,7 +148,7 @@ def process_transfer_event(self, transfer_id: str):
                 message=(
                     f"Dear {dst_user.get_full_name() or dst_user.username},\n\n"
                     f"You have received a transfer of {amount} "
-                    f"into your {dst_txn.account.get_name_display()} account "
+                    f"into your {dst_txn.account.get_account_type_display()} account "
                     f"from {src_user.get_full_name() or src_user.username}.\n\n"
                     f"New Balance: {dst_txn.account.balance.quantize(Decimal('0.0001'))}\n\n"
                     f"Transfer ID: {transfer.id}\n"

@@ -28,7 +28,7 @@ class AccountFactory(factory.django.DjangoModelFactory):
         model = Account
 
     owner_name = factory.Sequence(lambda n: f"Owner {n}")
-    name = "CURRENT"
+    account_type = "CURRENT"
     balance = Decimal("1000.0000")
     currency = "USD"
     is_active = True

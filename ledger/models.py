@@ -33,12 +33,12 @@ class Account(TimeStampedModel):
         max_length=255,
         verbose_name=_("owner name"),
     )
-    name = models.CharField(
+    account_type = models.CharField(
         max_length=20,
         choices=AccountType.choices,
         default=AccountType.CURRENT,
         help_text=_("Type/Label of the account"),
-        verbose_name=_("name"),
+        verbose_name=_("account type"),
     )
     currency = models.CharField(
         max_length=3,
@@ -69,7 +69,7 @@ class Account(TimeStampedModel):
         verbose_name_plural = _("Accounts")
 
     def __str__(self):
-        return f"{self.owner_name} - {self.name} ({self.currency} {self.balance})"
+        return f"{self.owner_name} - {self.account_type} ({self.currency} {self.balance})"
 
 
 class Transaction(models.Model):
@@ -128,7 +128,7 @@ class Transaction(models.Model):
         verbose_name_plural = _("Transactions")
 
     def __str__(self):
-        return f"{self.pk}: {self.transaction_type} {abs(self.amount)} to {self.account.name}"
+        return f"{self.pk}: {self.transaction_type} {abs(self.amount)} to {self.account.account_type}"
 
 
 class Transfer(TimeStampedModel):

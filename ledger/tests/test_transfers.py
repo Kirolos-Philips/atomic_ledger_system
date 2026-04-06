@@ -10,10 +10,10 @@ from .factories import AccountFactory
 class TransferTests(APITestCase):
     def setUp(self):
         self.source = AccountFactory(
-            owner_name="Source User", name="CURRENT", balance=Decimal("1000.0000")
+            owner_name="Source User", account_type="CURRENT", balance=Decimal("1000.0000")
         )
         self.dest = AccountFactory(
-            owner_name="Dest User", name="SAVINGS", balance=Decimal("0.0000")
+            owner_name="Dest User", account_type="SAVINGS", balance=Decimal("0.0000")
         )
 
     def _transfer(self, **overrides):
