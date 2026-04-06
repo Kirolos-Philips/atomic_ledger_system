@@ -8,7 +8,6 @@ from ..models import Account, Transaction, Transfer
 from .exceptions import (
     InvalidAmountError,
     LedgerError,
-    TransactionIdempotencyError,
 )
 from .validators import (
     validate_account_active,
@@ -39,11 +38,14 @@ def create_transaction(
         validate_sufficient_funds(account, amount)
 
         # 3. Check for idempotency key if provided
-        if (
-            idempotency_key
-            and Transaction.objects.filter(idempotency_key=idempotency_key).exists()
-        ):
-            raise TransactionIdempotencyError()
+        if idempotency_key:
+            existing_txn = Transaction.objects.filter(
+                idempotency_key=idempotency_key
+            ).first()
+            if existing_txn:
+                # If we got here, the serializer already validated the payload (account/amount)
+                # so we can safely return the existing record for a "Success Replay"
+                return existing_txn
 
         # 4. Create the transaction record
         txn_type = (

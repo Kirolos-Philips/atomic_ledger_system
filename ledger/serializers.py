@@ -4,6 +4,7 @@ from rest_framework import serializers
 from .logic.services import create_transaction, create_transfer
 from .logic.validators import (
     validate_account_active,
+    validate_idempotency,
     validate_sufficient_funds,
     validate_transfer_accounts,
 )
@@ -58,10 +59,16 @@ class TransactionSerializer(serializers.ModelSerializer):
             "created_at",
         ]
         read_only_fields = ["id", "transaction_type", "account_name", "created_at"]
+        extra_kwargs = {
+            "idempotency_key": {"validators": []},  # Handled manually in validate()
+        }
 
     def validate(self, data):
         account = data["account"]
         amount = data["amount"]
+        idempotency_key = data.get("idempotency_key")
+
+        validate_idempotency(idempotency_key, account.id, amount)
         validate_account_active(account)
         validate_sufficient_funds(account, amount)
         return data
@@ -140,6 +147,13 @@ class TransferSerializer(serializers.ModelSerializer):
         source_account = data["source_account"]
         destination_account = data["destination_account"]
         amount = data["amount"]
+        idempotency_key = data.get("idempotency_key")
+
+        if idempotency_key:
+            validate_idempotency(f"DR-{idempotency_key}", source_account.id, -amount)
+            validate_idempotency(
+                f"CR-{idempotency_key}", destination_account.id, amount
+            )
 
         # 1. Accounts must be different
         validate_transfer_accounts(source_account, destination_account)

@@ -14,33 +14,66 @@ class IdempotencyTests(APITestCase):
         )
 
     @patch("ledger.signals.process_transaction_event.delay")
-    def test_duplicate_key_rejected_unique_keys_succeed(self, mock_task):
-        """Parameterized: duplicate keys fail, distinct keys succeed, null keys always pass."""
-        cases = [
-            ("key-a", "key-a", True),  # duplicate → second rejected
-            ("key-x", "key-y", False),  # different → both succeed
-            (None, None, False),  # null → both succeed
-        ]
-        for key1, key2, should_reject_second in cases:
-            with self.subTest(key1=key1, key2=key2):
-                acct = AccountFactory(
-                    owner_name="Idem Use", balance=Decimal("1000.0000")
-                )
-                p1 = {"account": acct.id, "amount": "100.00", "idempotency_key": key1}
-                p2 = {"account": acct.id, "amount": "100.00", "idempotency_key": key2}
+    def test_idempotency_first_request_success(self, mock_task):
+        """Standard valid request with a unique key succeeds."""
+        acct = AccountFactory(owner_name="Idem Use", balance=Decimal("1000.0000"))
+        payload = {"account": acct.id, "amount": "100.00", "idempotency_key": "unique-k"}
+        res = self.client.post("/api/transactions/", payload, format="json")
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        acct.refresh_from_db()
+        self.assertEqual(acct.balance, Decimal("1100.0000"))
 
-                first = self.client.post("/api/transactions/", p1, format="json")
-                second = self.client.post("/api/transactions/", p2, format="json")
-                self.assertEqual(first.status_code, status.HTTP_201_CREATED)
+    @patch("ledger.signals.process_transaction_event.delay")
+    def test_idempotency_same_payload_replay_success(self, mock_task):
+        """Replaying the exact same request payload returns the original result (201)."""
+        acct = AccountFactory(owner_name="Idem Use", balance=Decimal("1000.0000"))
+        payload = {"account": acct.id, "amount": "100.00", "idempotency_key": "replay-k"}
+        
+        # First call
+        res1 = self.client.post("/api/transactions/", payload, format="json")
+        self.assertEqual(res1.status_code, status.HTTP_201_CREATED)
+        
+        # Second call (Replay)
+        res2 = self.client.post("/api/transactions/", payload, format="json")
+        self.assertEqual(res2.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(res2.data["id"], res1.data["id"])
+        
+        acct.refresh_from_db()
+        self.assertEqual(acct.balance, Decimal("1100.0000")) # Balance only affected once
 
-                if should_reject_second:
-                    self.assertIn(
-                        second.status_code,
-                        [status.HTTP_400_BAD_REQUEST, status.HTTP_409_CONFLICT],
-                    )
-                    acct.refresh_from_db()
-                    self.assertEqual(acct.balance, Decimal("1100.0000"))
-                else:
-                    self.assertEqual(second.status_code, status.HTTP_201_CREATED)
-                    acct.refresh_from_db()
-                    self.assertEqual(acct.balance, Decimal("1200.0000"))
+    @patch("ledger.signals.process_transaction_event.delay")
+    def test_idempotency_mismatch_payload_conflict(self, mock_task):
+        """Using the same key for a different payload (mismatched amount) results in 409."""
+        acct = AccountFactory(owner_name="Idem Use", balance=Decimal("1000.0000"))
+        key = "shared-k"
+        
+        # First call: $100
+        self.client.post("/api/transactions/", 
+                         {"account": acct.id, "amount": "100.00", "idempotency_key": key}, 
+                         format="json")
+        
+        # Second call: $200 (Conflict)
+        res = self.client.post("/api/transactions/", 
+                               {"account": acct.id, "amount": "200.00", "idempotency_key": key}, 
+                               format="json")
+        self.assertEqual(res.status_code, status.HTTP_409_CONFLICT)
+        
+        acct.refresh_from_db()
+        self.assertEqual(acct.balance, Decimal("1100.0000")) # Only first request applied
+
+    def test_idempotency_distinct_keys(self):
+        """Distinct keys for the same user always succeed."""
+        acct = AccountFactory(owner_name="Idem Use", balance=Decimal("1000.0000"))
+        self.client.post(
+            "/api/transactions/",
+            {"account": acct.id, "amount": "100.00", "idempotency_key": "k1"},
+            format="json",
+        )
+        res = self.client.post(
+            "/api/transactions/",
+            {"account": acct.id, "amount": "100.00", "idempotency_key": "k2"},
+            format="json",
+        )
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        acct.refresh_from_db()
+        self.assertEqual(acct.balance, Decimal("1200.0000"))
