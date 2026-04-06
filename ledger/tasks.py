@@ -8,19 +8,19 @@ from django.core.mail import send_mail
 logger = logging.getLogger(__name__)
 
 
-def _send_transaction_email(user, subject, message):
+def _send_transaction_email(email, subject, message):
     """Helper to send an email with error handling."""
     try:
         send_mail(
             subject=subject,
             message=message,
             from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[user.email],
+            recipient_list=[email],
             fail_silently=False,
         )
-        logger.info("Email sent to %s: %s", user.email, subject)
+        logger.info("Email sent to %s: %s", email, subject)
     except Exception:
-        logger.exception("Failed to send email to %s", user.email)
+        logger.exception("Failed to send email to %s", email)
 
 
 @shared_task(
@@ -38,28 +38,28 @@ def process_transaction_event(self, transaction_id: str, event_type: str):
     from ledger.models import Transaction
 
     try:
-        txn = Transaction.objects.select_related("account__user").get(id=transaction_id)
-        user = txn.account.user
+        txn = Transaction.objects.select_related("account").get(id=transaction_id)
+        account = txn.account
         amount = abs(txn.amount).quantize(Decimal("0.0001"))
 
         logger.info(
-            "Transaction event: %s | %s | Account: %s | Amount: %s | User: %s",
+            "Transaction event: %s | %s | Account: %s | Amount: %s | Owner: %s",
             event_type,
             txn.id,
-            txn.account.account_type,
+            account.account_type,
             amount,
-            user.username,
+            account.owner_name,
         )
 
         # Send email notification
-        if user.email:
+        if account.user_email:
             if event_type == "CREDIT":
                 subject = f"Deposit Received — {amount}"
                 message = (
-                    f"Dear {user.get_full_name() or user.username},\n\n"
+                    f"Dear {account.owner_name},\n\n"
                     f"A deposit of {amount} has been credited to your "
-                    f"{txn.account.get_account_type_display()} account.\n\n"
-                    f"New Balance: {txn.account.balance.quantize(Decimal('0.0001'))}\n\n"
+                    f"{account.get_account_type_display()} account.\n\n"
+                    f"New Balance: {account.balance.quantize(Decimal('0.0001'))}\n\n"
                     f"Transaction ID: {txn.id}\n"
                     f"Description: {txn.description or 'N/A'}\n\n"
                     f"— Atomic Ledger"
@@ -67,16 +67,16 @@ def process_transaction_event(self, transaction_id: str, event_type: str):
             else:
                 subject = f"Withdrawal Processed — {amount}"
                 message = (
-                    f"Dear {user.get_full_name() or user.username},\n\n"
+                    f"Dear {account.owner_name},\n\n"
                     f"A withdrawal of {amount} has been debited from your "
-                    f"{txn.account.get_account_type_display()} account.\n\n"
-                    f"New Balance: {txn.account.balance.quantize(Decimal('0.0001'))}\n\n"
+                    f"{account.get_account_type_display()} account.\n\n"
+                    f"New Balance: {account.balance.quantize(Decimal('0.0001'))}\n\n"
                     f"Transaction ID: {txn.id}\n"
                     f"Description: {txn.description or 'N/A'}\n\n"
                     f"— Atomic Ledger"
                 )
 
-            _send_transaction_email(user, subject, message)
+            _send_transaction_email(account.user_email, subject, message)
 
     except Transaction.DoesNotExist:
         logger.error(
@@ -103,56 +103,54 @@ def process_transfer_event(self, transfer_id: str):
 
     try:
         transfer = Transfer.objects.select_related(
-            "source_transaction__account__user",
-            "destination_transaction__account__user",
+            "source_transaction__account",
+            "destination_transaction__account",
         ).get(id=transfer_id)
 
-        src_txn = transfer.source_transaction
-        dst_txn = transfer.destination_transaction
-        src_user = src_txn.account.user
-        dst_user = dst_txn.account.user
-        amount = abs(src_txn.amount).quantize(Decimal("0.0001"))
+        src_account = transfer.source_transaction.account
+        dst_account = transfer.destination_transaction.account
+        amount = abs(transfer.source_transaction.amount).quantize(Decimal("0.0001"))
 
         logger.info(
             "Transfer event: %s | %s (%s) → %s (%s) | Amount: %s",
             transfer.id,
-            src_txn.account.account_type,
-            src_user.username,
-            dst_txn.account.account_type,
-            dst_user.username,
+            src_account.account_type,
+            src_account.owner_name,
+            dst_account.account_type,
+            dst_account.owner_name,
             amount,
         )
 
         # --- Email to Sender ---
-        if src_user.email:
+        if src_account.user_email:
             _send_transaction_email(
-                src_user,
+                src_account.user_email,
                 subject=f"Transfer Sent — {amount}",
                 message=(
-                    f"Dear {src_user.get_full_name() or src_user.username},\n\n"
+                    f"Dear {src_account.owner_name},\n\n"
                     f"You have successfully transferred {amount} "
-                    f"from your {src_txn.account.get_account_type_display()} account "
-                    f"to {dst_user.get_full_name() or dst_user.username}.\n\n"
-                    f"New Balance: {src_txn.account.balance.quantize(Decimal('0.0001'))}\n\n"
+                    f"from your {src_account.get_account_type_display()} account "
+                    f"to {dst_account.owner_name}.\n\n"
+                    f"New Balance: {src_account.balance.quantize(Decimal('0.0001'))}\n\n"
                     f"Transfer ID: {transfer.id}\n"
-                    f"Description: {src_txn.description or 'N/A'}\n\n"
+                    f"Description: {transfer.source_transaction.description or 'N/A'}\n\n"
                     f"— Atomic Ledger"
                 ),
             )
 
         # --- Email to Receiver ---
-        if dst_user.email:
+        if dst_account.user_email:
             _send_transaction_email(
-                dst_user,
+                dst_account.user_email,
                 subject=f"Transfer Received — {amount}",
                 message=(
-                    f"Dear {dst_user.get_full_name() or dst_user.username},\n\n"
+                    f"Dear {dst_account.owner_name},\n\n"
                     f"You have received a transfer of {amount} "
-                    f"into your {dst_txn.account.get_account_type_display()} account "
-                    f"from {src_user.get_full_name() or src_user.username}.\n\n"
-                    f"New Balance: {dst_txn.account.balance.quantize(Decimal('0.0001'))}\n\n"
+                    f"into your {dst_account.get_account_type_display()} account "
+                    f"from {src_account.owner_name}.\n\n"
+                    f"New Balance: {dst_account.balance.quantize(Decimal('0.0001'))}\n\n"
                     f"Transfer ID: {transfer.id}\n"
-                    f"Description: {dst_txn.description or 'N/A'}\n\n"
+                    f"Description: {transfer.source_transaction.description or 'N/A'}\n\n"
                     f"— Atomic Ledger"
                 ),
             )

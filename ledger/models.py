@@ -69,7 +69,15 @@ class Account(TimeStampedModel):
         verbose_name_plural = _("Accounts")
 
     def __str__(self):
-        return f"{self.owner_name} - {self.account_type} ({self.currency} {self.balance})"
+        return (
+            f"{self.owner_name} - {self.account_type} ({self.currency} {self.balance})"
+        )
+
+    @property
+    def user_email(self):
+        """Dynamic placeholder email derived from owner_name."""
+        username = self.owner_name.replace(" ", "_")
+        return f"{username}@test.com"
 
 
 class Transaction(models.Model):
