@@ -6,7 +6,7 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     container_name: ledger_web
-    command: /app/docker/entrypoint.sh python -m debugpy --listen 0.0.0.0:5678 manage.py runserver 0.0.0.0:8000 --nothreading --noreload
+    command: /app/docker/entrypoint.sh python -m debugpy --listen 0.0.0.0:5678 manage.py runserver 0.0.0.0:8000
     volumes:
       - ..:/app
       - /app/.venv
@@ -55,7 +55,7 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     container_name: ledger_worker
-    command: celery -A config worker --loglevel=info
+    command: /app/docker/entrypoint.sh celery -A config worker --loglevel=info
     volumes:
       - ..:/app
       - /app/.venv
