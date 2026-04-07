@@ -2,17 +2,25 @@ from decimal import Decimal
 from typing import Optional
 
 from django.db import transaction
-from django.utils.translation import gettext_lazy as _
 
 from ..models import Account, Transaction, Transfer
 from .exceptions import (
     InvalidAmountError,
-    LedgerError,
 )
 from .validators import (
     validate_account_active,
     validate_sufficient_funds,
+    validate_transfer_accounts,
 )
+
+
+def _get_existing_by_idempotency_key(
+    model_class: Transaction | Transfer, key: Optional[str]
+) -> Transaction | Transfer | None:
+    """Returns an existing record if the idempotency key matches, else None."""
+    if not key:
+        return None
+    return model_class.objects.filter(idempotency_key=key).first()
 
 
 def create_transaction(
@@ -33,19 +41,16 @@ def create_transaction(
         # 1. Lock the account row for the duration of the transaction
         account = Account.objects.select_for_update().get(id=account_id)
 
-        # 2. Business Validations
+        # 2. Business Validations (DOUBLE CHECK)
         validate_account_active(account)
         validate_sufficient_funds(account, amount)
 
         # 3. Check for idempotency key if provided
-        if idempotency_key:
-            existing_txn = Transaction.objects.filter(
-                idempotency_key=idempotency_key
-            ).first()
-            if existing_txn:
-                # If we got here, the serializer already validated the payload (account/amount)
-                # so we can safely return the existing record for a "Success Replay"
-                return existing_txn
+        existing_txn = _get_existing_by_idempotency_key(Transaction, idempotency_key)
+        if existing_txn:
+            # If we got here, the serializer already validated the payload (account/amount)
+            # so we can safely return the existing record for a "Success Replay"
+            return existing_txn
 
         # 4. Create the transaction record
         txn_type = (
@@ -82,14 +87,16 @@ def create_transfer(
     if amount <= 0:
         raise InvalidAmountError()
 
-    # (Early check, final check happens inside create_transaction via validators)
-    # Note: We need a temporary check here or just allow create_transaction to handle it.
-    # To be explicit and consistent with original logic:
-    if source_account_id == destination_account_id:
-        raise LedgerError(_("Source and destination accounts must be different."))
+    # (DOUBLE CHECK)
+    validate_transfer_accounts(source_account_id, destination_account_id)
 
     with transaction.atomic():
-        # 1. Create the source debit transaction
+        # 1. Check for idempotency key if provided
+        existing_transfer = _get_existing_by_idempotency_key(Transfer, idempotency_key)
+        if existing_transfer:
+            return existing_transfer
+
+        # 2. Create the source debit transaction
         source_txn = create_transaction(
             account_id=source_account_id,
             amount=-amount,
@@ -97,7 +104,7 @@ def create_transfer(
             idempotency_key=f"DR-{idempotency_key}" if idempotency_key else None,
         )
 
-        # 2. Create the destination credit transaction
+        # 3. Create the destination credit transaction
         dest_txn = create_transaction(
             account_id=destination_account_id,
             amount=amount,
@@ -105,9 +112,12 @@ def create_transfer(
             idempotency_key=f"CR-{idempotency_key}" if idempotency_key else None,
         )
 
-        # 3. Create the transfer record to link them
+        # 4. Create the transfer record to link them
         transfer = Transfer.objects.create(
-            source_transaction=source_txn, destination_transaction=dest_txn
+            source_transaction=source_txn,
+            destination_transaction=dest_txn,
+            amount=amount,
+            idempotency_key=idempotency_key,
         )
 
         return transfer

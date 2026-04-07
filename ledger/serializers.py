@@ -1,12 +1,15 @@
+from decimal import Decimal
+
 from drf_spectacular.utils import OpenApiExample, extend_schema_serializer
 from rest_framework import serializers
 
 from .logic.services import create_transaction, create_transfer
 from .logic.validators import (
     validate_account_active,
-    validate_idempotency,
     validate_sufficient_funds,
     validate_transfer_accounts,
+    validate_transfer_idempotency,
+    validate_txn_idempotency,
 )
 from .models import Account, Transaction, Transfer
 
@@ -68,7 +71,7 @@ class TransactionSerializer(serializers.ModelSerializer):
         amount = data["amount"]
         idempotency_key = data.get("idempotency_key")
 
-        validate_idempotency(idempotency_key, account.id, amount)
+        validate_txn_idempotency(idempotency_key, account.id, amount)
         validate_account_active(account)
         validate_sufficient_funds(account, amount)
         return data
@@ -106,8 +109,7 @@ class TransferSerializer(serializers.ModelSerializer):
     amount = serializers.DecimalField(
         max_digits=20,
         decimal_places=4,
-        min_value=0.01,
-        write_only=True,
+        min_value=Decimal("0.0001"),
         help_text="Amount to transfer (must be > 0).",
     )
     description = serializers.CharField(
@@ -119,14 +121,7 @@ class TransferSerializer(serializers.ModelSerializer):
     idempotency_key = serializers.CharField(
         required=False,
         allow_null=True,
-        write_only=True,
         help_text="Unique key to prevent duplicate transfer processing.",
-    )
-    transfer_amount = serializers.DecimalField(
-        source="destination_transaction.amount",
-        read_only=True,
-        max_digits=20,
-        decimal_places=4,
     )
 
     class Meta:
@@ -136,7 +131,6 @@ class TransferSerializer(serializers.ModelSerializer):
             "source_account",
             "destination_account",
             "amount",
-            "transfer_amount",
             "description",
             "idempotency_key",
             "source_transaction",
@@ -157,8 +151,17 @@ class TransferSerializer(serializers.ModelSerializer):
         idempotency_key = data.get("idempotency_key")
 
         if idempotency_key:
-            validate_idempotency(f"DR-{idempotency_key}", source_account.id, -amount)
-            validate_idempotency(
+            validate_transfer_idempotency(
+                idempotency_key, source_account.id, destination_account.id, amount
+            )
+            # Re-checking component transactions is optional since transfer check covers it,
+            # but let's keep it for maximum safety or just rely on transfer level.
+            # Actually, if the transfer exists, create_transfer returns it before creating txns.
+            # If it doesn't exist, we should still check if those specific keys were used before.
+            validate_txn_idempotency(
+                f"DR-{idempotency_key}", source_account.id, -amount
+            )
+            validate_txn_idempotency(
                 f"CR-{idempotency_key}", destination_account.id, amount
             )
 

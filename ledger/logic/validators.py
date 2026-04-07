@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from django.utils.translation import gettext_lazy as _
 
-from ..models import Account, Transaction
+from ..models import Account, Transaction, Transfer
 from .exceptions import (
     AccountInactiveError,
     InsufficientFundsError,
@@ -23,21 +23,58 @@ def validate_sufficient_funds(account: Account, amount: Decimal):
 
 
 def validate_transfer_accounts(source: Account, destination: Account):
-    if source.id == destination.id:
+    source_id = getattr(source, "id", source)
+    destination_id = getattr(destination, "id", destination)
+    if source_id == destination_id:
         raise LedgerError(_("Source and destination accounts must be different."))
 
 
-def validate_idempotency(idempotency_key: str, account_id: int, amount: Decimal):
+def validate_idempotency(
+    model_class, idempotency_key: str, payload_checks: dict, error_message: str = None
+):
     """
-    Checks if an idempotency key exists and verifies if the payload matches.
-    If key exists but payload is different, raises TransactionIdempotencyError.
+    Generic idempotency validator.
+    payload_checks: dict of {field_name: expected_value}
     """
     if not idempotency_key:
         return
 
-    existing = Transaction.objects.filter(idempotency_key=idempotency_key).first()
+    existing = model_class.objects.filter(idempotency_key=idempotency_key).first()
     if existing:
-        if existing.account_id != account_id or existing.amount != amount:
-            raise TransactionIdempotencyError(
-                _("Idempotency key exists but request payload does not match.")
-            )
+        for field, expected_value in payload_checks.items():
+            # Handle nested attributes like 'source_transaction.account_id'
+            actual_value = existing
+            for part in field.split("."):
+                actual_value = getattr(actual_value, part)
+
+            if actual_value != expected_value:
+                raise TransactionIdempotencyError(
+                    error_message
+                    or _("Idempotency key exists but request payload does not match.")
+                )
+
+
+def validate_txn_idempotency(idempotency_key: str, account_id: int, amount: Decimal):
+    validate_idempotency(
+        Transaction,
+        idempotency_key,
+        {"account_id": account_id, "amount": amount},
+    )
+
+
+def validate_transfer_idempotency(
+    idempotency_key: str,
+    source_account_id: int,
+    destination_account_id: int,
+    amount: Decimal,
+):
+
+    validate_idempotency(
+        Transfer,
+        idempotency_key,
+        {
+            "source_transaction.account_id": source_account_id,
+            "destination_transaction.account_id": destination_account_id,
+            "amount": amount,
+        },
+    )

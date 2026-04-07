@@ -157,8 +157,26 @@ class Transfer(TimeStampedModel):
         related_name="incoming_transfer",
         verbose_name=_("destination transaction"),
     )
+    amount = models.DecimalField(
+        max_digits=20,
+        decimal_places=4,
+        help_text=_("Amount transferred (must be > 0)"),
+        verbose_name=_("amount"),
+        null=True,  # Allow null temporarily for migration of existing records if any
+    )
+    idempotency_key = models.CharField(
+        max_length=255,
+        unique=True,
+        null=True,
+        blank=True,
+        help_text=_("Unique key to prevent duplicate transfer processing"),
+        verbose_name=_("idempotency key"),
+    )
 
     class Meta:
+        constraints = [
+            CheckConstraint(check=Q(amount__gt=0), name="transfer_amount_positive")
+        ]
         indexes = [
             models.Index(fields=["-created_at"], name="idx_transfer_created"),
         ]
