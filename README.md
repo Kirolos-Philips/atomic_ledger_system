@@ -79,4 +79,5 @@ The system uses a robust idempotency mechanism via `idempotency_key` in request 
 3. **Immutable Audit Vault**: Implement a separate, append-only audit log for all ledger movements to ensure regulatory compliance.
 4. **Property-Based Testing (Hypothesis)**: Use random edge-case generation to verify ledger invariants (e.g., total balance conservation).
 5. **Adaptive Rate Limiting**: Implement API throttling to protect against automated abuse and ensure system stability under heavy load.
+6. **Transaction Reversals and Voiding**: Implement the ability to void or reverse transactions later, allowing safe correction of errors while maintaining a complete and accurate ledger history.
 
