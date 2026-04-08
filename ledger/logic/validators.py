@@ -30,14 +30,18 @@ def validate_transfer_accounts(source: Account, destination: Account):
 
 
 def validate_idempotency(
-    model_class, idempotency_key: str, payload_checks: dict, error_message: str = None
-):
+    model_class: Transaction | Transfer,
+    idempotency_key: str,
+    payload_checks: dict,
+    error_message: str = None,
+) -> bool:
     """
     Generic idempotency validator.
     payload_checks: dict of {field_name: expected_value}
+    Returns True if exists and matches, False if doesn't exist.
     """
     if not idempotency_key:
-        return
+        return False
 
     existing = model_class.objects.filter(idempotency_key=idempotency_key).first()
     if existing:
@@ -52,10 +56,13 @@ def validate_idempotency(
                     error_message
                     or _("Idempotency key exists but request payload does not match.")
                 )
+    return bool(existing)
 
 
-def validate_txn_idempotency(idempotency_key: str, account_id: int, amount: Decimal):
-    validate_idempotency(
+def validate_txn_idempotency(
+    idempotency_key: str, account_id: int, amount: Decimal
+) -> bool:
+    return validate_idempotency(
         Transaction,
         idempotency_key,
         {"account_id": account_id, "amount": amount},
@@ -67,9 +74,9 @@ def validate_transfer_idempotency(
     source_account_id: int,
     destination_account_id: int,
     amount: Decimal,
-):
+) -> bool:
 
-    validate_idempotency(
+    return validate_idempotency(
         Transfer,
         idempotency_key,
         {

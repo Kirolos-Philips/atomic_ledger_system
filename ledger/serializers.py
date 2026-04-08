@@ -71,9 +71,10 @@ class TransactionSerializer(serializers.ModelSerializer):
         amount = data["amount"]
         idempotency_key = data.get("idempotency_key")
 
-        validate_txn_idempotency(idempotency_key, account.id, amount)
-        validate_account_active(account)
-        validate_sufficient_funds(account, amount)
+        is_replay = validate_txn_idempotency(idempotency_key, account.id, amount)
+        if not is_replay:
+            validate_account_active(account)
+            validate_sufficient_funds(account, amount)
         return data
 
     def create(self, validated_data):
@@ -150,8 +151,9 @@ class TransferSerializer(serializers.ModelSerializer):
         amount = data["amount"]
         idempotency_key = data.get("idempotency_key")
 
+        is_replay = False
         if idempotency_key:
-            validate_transfer_idempotency(
+            is_replay = validate_transfer_idempotency(
                 idempotency_key, source_account.id, destination_account.id, amount
             )
             # Re-checking component transactions is optional since transfer check covers it,
@@ -165,15 +167,16 @@ class TransferSerializer(serializers.ModelSerializer):
                 f"CR-{idempotency_key}", destination_account.id, amount
             )
 
-        # 1. Accounts must be different
-        validate_transfer_accounts(source_account, destination_account)
+        if not is_replay:
+            # 1. Accounts must be different
+            validate_transfer_accounts(source_account, destination_account)
 
-        # 2. Both accounts must be active
-        validate_account_active(source_account)
-        validate_account_active(destination_account)
+            # 2. Both accounts must be active
+            validate_account_active(source_account)
+            validate_account_active(destination_account)
 
-        # 3. Source must have sufficient funds
-        validate_sufficient_funds(source_account, -amount)
+            # 3. Source must have sufficient funds
+            validate_sufficient_funds(source_account, -amount)
 
         return data
 
